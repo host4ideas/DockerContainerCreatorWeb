@@ -1,0 +1,42 @@
+﻿@using Docker.DotNet.Models;
+@* Finalmente, el formulario de creación de contenedores se encuentra en la vista `Index` de la clase `HomeController`.
+    Esta vista utiliza la lista de imágenes enviada por el controlador para mostrar una lista desplegable al usuario. Una
+    vez que el usuario selecciona una imagen y especifica un nombre para el contenedor, se envía una solicitud POST al
+    controlador para iniciar la creación del contenedor. *@
+
+@model IList<ImagesListResponse>
+@*@model ImageModel*@
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Crear contenedor de Docker</h1>
+    <p>Use este formulario para crear un contenedor de Docker con la imagen seleccionada y el nombre especificado.</p>
+</div>
+@if (ViewData["Message"] != null)
+{
+    <div class="alert alert-success" role="alert">
+        @ViewData["Message"]
+    </div>
+}
+
+<form asp-controller="Home" asp-action="Create" method="post">
+    <div class="form-group">
+        <label for="image">Imagen</label>
+        <select class="form-control" id="image" name="image">
+            @foreach (var image in Model)
+            {
+                <option value="@image.ID">@image.RepoTags.FirstOrDefault()</option>
+            }
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="containerName">Nombre del contenedor</label>
+        <input type="text" class="form-control" id="containerName" name="containerName"
+               placeholder="Ingrese el nombre del contenedor" />
+    </div>
+    <button type="submit" class="btn btn-primary">Crear contenedor</button>
+
+</form>
