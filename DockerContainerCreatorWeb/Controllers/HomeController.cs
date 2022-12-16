@@ -18,6 +18,7 @@ namespace DockerContainerCreatorWeb.Controllers
         {
             // Obtener la lista de imágenes disponibles en el servidor de Docker
             var images = _client.Images.ListImagesAsync(new ImagesListParameters()).Result;
+            System.Diagnostics.Debug.WriteLine(images);
             // Enviar la lista de imágenes al formulario de creación de contenedores
             return View(images);
         }
@@ -63,6 +64,17 @@ namespace DockerContainerCreatorWeb.Controllers
                 ViewData["Message"] = $"Error al crear el contenedor: {ex.Message}";
             }
 
+            // Obtain the list of images available on the Docker server
+            var images = _client.Images.ListImagesAsync(new ImagesListParameters()).Result;
+
+            // Obtain the list of containers on the Docker server
+            var containers = _client.Containers.ListContainersAsync(new ContainersListParameters()).Result;
+
+            // Add the list of images and containers to the view data
+            ViewData["images"] = images;
+            ViewData["containers"] = containers;
+
+            // Render the view, passing the list of images and containers as arguments
             return View("Index");
         }
     }
