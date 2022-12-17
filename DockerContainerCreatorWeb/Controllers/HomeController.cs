@@ -75,7 +75,7 @@ namespace DockerContainerCreatorWeb.Controllers
             ViewData["containers"] = containers;
 
             // Render the view, passing the list of images and containers as arguments
-            return View("Index");
+            return View("Index", images);
         }
     }
 }
