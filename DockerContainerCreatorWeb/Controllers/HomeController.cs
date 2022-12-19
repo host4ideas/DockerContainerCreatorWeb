@@ -43,6 +43,24 @@ namespace DockerContainerCreatorWeb.Controllers
             return View();
         }
 
+        private async Task PullImageIfNotExist(string image, CancellationToken ct = default)
+        {
+            var existingContainers = await _client.Containers.ListContainersAsync(new ContainersListParameters
+            {
+                All = true
+            }, ct);
+
+            var exists = existingContainers.Any(x => x.Image == image);
+
+            if (!exists)
+            {
+                await _client.Images.CreateImageAsync(new ImagesCreateParameters
+                {
+                    FromImage = image,
+                }, null, null, ct);
+            }
+        }
+
         /// <summary>
         /// Method <c>Create</c> creates a Docker container. Sends to view the existing containers and images.
         /// </summary>
@@ -53,14 +71,15 @@ namespace DockerContainerCreatorWeb.Controllers
         /// The name for the new container.
         /// </param>
         [HttpPost]
-        public async Task<IActionResult> Create(string image, string containerName)
+        public async Task<IActionResult> Create(string image, string containerName, CancellationToken ct = default)
         {
             try
             {
+                await PullImageIfNotExist(image, ct);
+
                 // Crear una nueva configuración para el contenedor
                 var config = new Config
                 {
-                    Image = image,
                     AttachStdin = true,
                     AttachStdout = true,
                     AttachStderr = true,
@@ -68,21 +87,23 @@ namespace DockerContainerCreatorWeb.Controllers
                     Tty = true
                 };
 
-                // Crear una nueva configuración para el host del contenedor
-                var hostConfig = new HostConfig
-                {
-                    AutoRemove = true
-                };
-
-                // Crear una nueva opción de creación de contenedor
-                var createOptions = new CreateContainerParameters(config)
-                {
-                    HostConfig = hostConfig,
-                    Name = containerName
-                };
-
                 // Crear el contenedor
-                await _client.Containers.CreateContainerAsync(createOptions);
+                var createdContainer = await _client.Containers.CreateContainerAsync(new CreateContainerParameters(config)
+                {
+                    //ExposedPorts = new Dictionary<string, EmptyStruct>{
+                    //    {
+                    //        "80/tcp",
+                    //        default
+                    //    }
+                    //},
+                    Image = image,
+                    Name = containerName,
+                    HostConfig = new HostConfig
+                    {
+                        PublishAllPorts = true,
+                        AutoRemove = true
+                    }
+                }, ct);
 
                 // Mostrar un mensaje de éxito al usuario
                 ViewData["Message"] = "Contenedor creado con éxito!";
@@ -94,10 +115,10 @@ namespace DockerContainerCreatorWeb.Controllers
             }
 
             // Obtain the list of images available on the Docker server
-            var images = _client.Images.ListImagesAsync(new ImagesListParameters()).Result;
+            var images = _client.Images.ListImagesAsync(new ImagesListParameters(), ct).Result;
 
             // Obtain the list of containers on the Docker server
-            var containers = _client.Containers.ListContainersAsync(new ContainersListParameters()).Result;
+            var containers = _client.Containers.ListContainersAsync(new ContainersListParameters(), ct).Result;
 
             // Add the list of images and containers to the view data
             ViewData["images"] = images;
@@ -105,6 +126,30 @@ namespace DockerContainerCreatorWeb.Controllers
 
             // Render the view, passing the list of images and containers as arguments
             return View("Index");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> StopContainer(string containerID)
+        {
+            // Stop and remove the container
+            await _client.Containers.StopContainerAsync(containerID,
+                new ContainerStopParameters
+                {
+                    WaitBeforeKillSeconds = 10
+                });
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RemoveContainer(string containerID)
+        {
+            await _client.Containers.RemoveContainerAsync(containerID,
+            new ContainerRemoveParameters
+            {
+                Force = true
+            });
+
+            return View();
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
