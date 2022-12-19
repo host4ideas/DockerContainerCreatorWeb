@@ -1,21 +1,31 @@
 using Docker.DotNet;
 using Docker.DotNet.Models;
+using System.Runtime.InteropServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Agregar el cliente de Docker como un servicio
-// Default Docker Engine on Windows
-DockerClient client = new DockerClientConfiguration(
-    new Uri("npipe://./pipe/docker_engine"))
-     .CreateClient();
+var IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+var IsLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
-// Default Docker Engine on Linux
-//DockerClient client = new DockerClientConfiguration(
-//    new Uri("unix:///var/run/docker.sock"))
-//     .CreateClient();
+string DockerApiUri()
+{
+    if (IsWindows)
+        return "npipe://./pipe/docker_engine";
+
+    if (IsLinux)
+        return "unix:///var/run/docker.sock";
+
+    throw new Exception(
+        "Was unable to determine what OS this is running on, does not appear to be Windows or Linux!?");
+}
+
+// Agregar el cliente de Docker como un servicio
+DockerClient client = new DockerClientConfiguration(
+    new Uri(DockerApiUri()))
+     .CreateClient();
 
 builder.Services.AddSingleton<DockerClient>(client);
 
