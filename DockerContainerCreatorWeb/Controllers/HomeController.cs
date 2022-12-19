@@ -1,7 +1,8 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Docker.DotNet;
+﻿using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
+using DockerContainerCreatorWeb.Models;
 using Docker.DotNet.Models;
+using Docker.DotNet;
 
 namespace DockerContainerCreatorWeb.Controllers
 {
@@ -9,20 +10,48 @@ namespace DockerContainerCreatorWeb.Controllers
     {
         private readonly DockerClient _client;
 
-        public HomeController(DockerClient client)
+        private readonly ILogger<HomeController> _logger;
+
+        public HomeController(DockerClient client, ILogger<HomeController> logger)
         {
             _client = client;
+            _logger = logger;
+        }
+        public IActionResult Privacy()
+        {
+            return View();
         }
 
+        /// <summary>
+        /// Method <c>Index</c> executed on view creation.
+        /// </summary>
         public IActionResult Index()
         {
-            // Obtener la lista de imágenes disponibles en el servidor de Docker
+            // Obtain the list of images available on the Docker server
             var images = _client.Images.ListImagesAsync(new ImagesListParameters()).Result;
-            System.Diagnostics.Debug.WriteLine(images);
-            // Enviar la lista de imágenes al formulario de creación de contenedores
-            return View(images);
+
+            // Obtain the list of containers on the Docker server
+            var containers = _client.Containers.ListContainersAsync(new ContainersListParameters()).Result;
+
+            System.Diagnostics.Debug.WriteLine(containers.Count);
+            System.Diagnostics.Debug.WriteLine(images.Count);
+
+            // Add the list of images and containers to the view data
+            ViewData["images"] = images;
+            ViewData["containers"] = containers;
+
+            return View();
         }
 
+        /// <summary>
+        /// Method <c>Create</c> creates a Docker container. Sends to view the existing containers and images.
+        /// </summary>
+        /// <param name="image">
+        /// The name of the image to use to create the new container.
+        /// </param>
+        /// <param name="containerName">
+        /// The name for the new container.
+        /// </param>
         [HttpPost]
         public async Task<IActionResult> Create(string image, string containerName)
         {
@@ -75,7 +104,13 @@ namespace DockerContainerCreatorWeb.Controllers
             ViewData["containers"] = containers;
 
             // Render the view, passing the list of images and containers as arguments
-            return View("Index", images);
+            return View("Index");
+        }
+
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 }

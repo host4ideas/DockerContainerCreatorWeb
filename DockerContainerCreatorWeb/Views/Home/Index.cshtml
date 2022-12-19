@@ -4,12 +4,10 @@
     vez que el usuario selecciona una imagen y especifica un nombre para el contenedor, se envía una solicitud POST al
     controlador para iniciar la creación del contenedor. *@
 
-@*@{
-    var images = (List<ImagesListResponse>)ViewData["images"];
-    var containers = (List<ContainerListResponse>)ViewData["containers"];
-}*@
-
-@model IList<ImagesListResponse>
+@{
+    var images = (IList<ImagesListResponse>)ViewData["images"];
+    var containers = (IList<ContainerListResponse>)ViewData["containers"];
+}
 
 @{
     ViewData["Title"] = "Home Page";
@@ -27,24 +25,24 @@
 }
 
 @*Containers*@
-@*@if (containers == null || !containers.Any())
+@if (containers == null || !containers.Any())
 {
     <p>No se han encontrado contenedores.</p>
 } else
 {
     <div class="form-group">
-        <label for="image">Imagen</label>
-        <select class="form-control" id="image" name="image">
+        <label for="container">Container</label>
+        <select class="form-control" id="container" name="container">
             @foreach (var container in containers)
             {
                 <option value="@container.ID">@container.Names.ToString()</option>
             }
         </select>
     </div>
-}*@
+}
 
 @*Images*@
-@if (Model == null || !Model.Any())
+@if (images == null || !images.Any())
 {
     <p>No se han encontrado imágenes disponibles para crear contenedores.</p>
 }
@@ -54,7 +52,7 @@ else
         <div class="form-group">
             <label for="image">Imagen</label>
             <select class="form-control" id="image" name="image">
-                @foreach (var image in Model)
+                @foreach (var image in images)
                 {
                     <option value="@image.ID">@image.RepoTags.FirstOrDefault()</option>
                 }
