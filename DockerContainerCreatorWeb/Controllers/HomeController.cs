@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
-using DockerContainerCreatorWeb.Models;
+﻿using Docker.DotNet;
 using Docker.DotNet.Models;
-using Docker.DotNet;
+using DockerContainerCreatorWeb.Models;
+using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 
 namespace DockerContainerCreatorWeb.Controllers
 {
@@ -27,18 +27,30 @@ namespace DockerContainerCreatorWeb.Controllers
         /// </summary>
         public IActionResult Index()
         {
-            // Obtain the list of images available on the Docker server
-            var images = _client.Images.ListImagesAsync(new ImagesListParameters()).Result;
+            try
+            {
+                // try to ping Doccker daemon through Docker Client --> raises DockerApiException
+                _client.System.PingAsync().Wait();
 
-            // Obtain the list of containers on the Docker server
-            var containers = _client.Containers.ListContainersAsync(new ContainersListParameters()).Result;
+                ViewData["Message"] = "Docker se está ejecutando con normalidad";
 
-            System.Diagnostics.Debug.WriteLine(containers.Count);
-            System.Diagnostics.Debug.WriteLine(images.Count);
+                // Obtain the list of images available on the Docker server
+                var images = _client.Images.ListImagesAsync(new ImagesListParameters()).Result;
 
-            // Add the list of images and containers to the view data
-            ViewData["images"] = images;
-            ViewData["containers"] = containers;
+                // Obtain the list of containers on the Docker server
+                var containers = _client.Containers.ListContainersAsync(new ContainersListParameters()).Result;
+
+                System.Diagnostics.Debug.WriteLine(containers.Count);
+                System.Diagnostics.Debug.WriteLine(images.Count);
+
+                // Add the list of images and containers to the view data
+                ViewData["images"] = images;
+                ViewData["containers"] = containers;
+            }
+            catch (Exception ex)
+            {
+                ViewData["ErrorMessage"] = $"No se pudo conectar al Docker daemon. Compruebe que Docker se está ejecutando con normalidad:<br />{ex.Message}";
+            }
 
             return View();
         }
@@ -111,7 +123,7 @@ namespace DockerContainerCreatorWeb.Controllers
             catch (Exception ex)
             {
                 // Mostrar un mensaje de error al usuario
-                ViewData["Message"] = $"Error al crear el contenedor: {ex.Message}";
+                ViewData["ErrorMessage"] = $"Error al crear el contenedor: {ex.Message}";
             }
 
             // Obtain the list of images available on the Docker server
