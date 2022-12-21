@@ -42,7 +42,9 @@
         <select class="form-control" id="container" name="container">
             @foreach (var container in containers)
             {
-                <option value="@container.ID">@container.Names.ToString()</option>
+               <option>
+                    @(string.Join(",", @container.Names))
+                </option>
             }
         </select>
     </div>

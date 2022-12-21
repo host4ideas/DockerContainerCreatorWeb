@@ -38,10 +38,10 @@ namespace DockerContainerCreatorWeb.Controllers
                 var images = _client.Images.ListImagesAsync(new ImagesListParameters()).Result;
 
                 // Obtain the list of containers on the Docker server
-                var containers = _client.Containers.ListContainersAsync(new ContainersListParameters()).Result;
-
-                System.Diagnostics.Debug.WriteLine(containers.Count);
-                System.Diagnostics.Debug.WriteLine(images.Count);
+                var containers = _client.Containers.ListContainersAsync(new ContainersListParameters
+                {
+                    All = true
+                }).Result;
 
                 // Add the list of images and containers to the view data
                 ViewData["images"] = images;
@@ -62,7 +62,12 @@ namespace DockerContainerCreatorWeb.Controllers
                 All = true
             }, ct);
 
-            var exists = existingContainers.Any(x => x.Image == image);
+            Console.WriteLine(existingContainers.Count);
+
+            var exists = existingContainers.Any(x => { 
+                Console.WriteLine(x.Image);
+                return x.Image == image;
+            });
 
             if (!exists)
             {
