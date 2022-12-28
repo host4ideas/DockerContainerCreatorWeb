@@ -2,6 +2,8 @@
 using Docker.DotNet.Models;
 using DockerContainerCreatorWeb.Models;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 
 namespace DockerContainerCreatorWeb.Controllers
@@ -55,44 +57,61 @@ namespace DockerContainerCreatorWeb.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Checks if the desired image exist, if not it will be pulled from DockerHub.
+        /// </summary>
+        /// <param name="image"></param> Name of the image.
+        /// <param name="ct"></param>
+        /// <returns></returns>
         private async Task PullImageIfNotExist(string image, CancellationToken ct = default)
         {
-            var existingContainers = await _client.Containers.ListContainersAsync(new ContainersListParameters
+            try
             {
-                All = true
-            }, ct);
+                // List all images on the machine
+                var images = await _client.Images.ListImagesAsync(new ImagesListParameters(), ct);
 
-            Console.WriteLine(existingContainers.Count);
+                // Check if the image is present on the machine
+                var exists = images.Any(x => x.RepoTags.Contains(image));
 
-            var exists = existingContainers.Any(x => { 
-                Console.WriteLine(x.Image);
-                return x.Image == image;
-            });
-
-            if (!exists)
-            {
-                await _client.Images.CreateImageAsync(new ImagesCreateParameters
+                if (!exists)
                 {
-                    FromImage = image,
-                }, null, null, ct);
+                    // Pull the image from the Docker registry
+                    await _client.Images.CreateImageAsync(
+                        new ImagesCreateParameters
+                        {
+                            FromImage = image,
+                        },
+                        null,
+                        new Progress<JSONMessage>(m => Console.WriteLine(m.Status)), ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Mostrar un mensaje de error al usuario
+                ViewData["ErrorMessage"] = $"Error al crear el contenedor: {ex.Message}";
             }
         }
 
         /// <summary>
         /// Method <c>Create</c> creates a Docker container. Sends to view the existing containers and images.
         /// </summary>
-        /// <param name="image">
-        /// The name of the image to use to create the new container.
-        /// </param>
-        /// <param name="containerName">
-        /// The name for the new container.
-        /// </param>
+        /// <param name="image">The image to use to create the container</param>
+        /// <param name="containerName">The container name</param>
+        /// <param name="mappingPorts">The map of the exposed ports and it's binding to a it's host port</param>
+        /// <param name="ct">Cancellation token</param>
+        /// <returns></returns>
         [HttpPost]
-        public async Task<IActionResult> Create(string image, string containerName, CancellationToken ct = default)
+        public async Task<IActionResult> CreateFormContainer(
+            string image,
+            string containerName,
+            string mappingPorts,
+            CancellationToken ct = default)
         {
             try
             {
                 await PullImageIfNotExist(image, ct);
+
+                var mappingPortsObject = JsonConvert.DeserializeObject<PortMapping[]>(mappingPorts);
 
                 // Crear una nueva configuración para el contenedor
                 var config = new Config
@@ -101,25 +120,55 @@ namespace DockerContainerCreatorWeb.Controllers
                     AttachStdout = true,
                     AttachStderr = true,
                     OpenStdin = true,
-                    Tty = true
+                    Tty = true,
                 };
+
+                //Define the host configuration
+                var hostConfig = new HostConfig { };
+                var exposedPorts = new Dictionary<string, EmptyStruct> { };
+
+                if (mappingPortsObject != null && mappingPortsObject.Any())
+                {
+                    var portBindings = new Dictionary<string, IList<PortBinding>> { };
+
+                    foreach (var item in mappingPortsObject)
+                    {
+                        portBindings.Add(
+                            item.ContainerPort,
+                            new List<PortBinding> {
+                                new PortBinding { HostPort = item.HostPort }
+                            }
+                        );
+                        exposedPorts.Add(item.ContainerPort, default);
+                    }
+
+                    hostConfig = new HostConfig
+                    {
+                        PortBindings = portBindings,
+                        AutoRemove = false,
+                    };
+                }
+                else
+                {
+                    hostConfig = new HostConfig
+                    {
+                        PublishAllPorts = true,
+                        AutoRemove = false,
+                    };
+
+                    exposedPorts = new Dictionary<string, EmptyStruct>
+                    {
+                        { "80/tcp", default },
+                    };
+                }
 
                 // Crear el contenedor
                 var createdContainer = await _client.Containers.CreateContainerAsync(new CreateContainerParameters(config)
                 {
-                    //ExposedPorts = new Dictionary<string, EmptyStruct>{
-                    //    {
-                    //        "80/tcp",
-                    //        default
-                    //    }
-                    //},
-                    Image = image,
                     Name = containerName,
-                    HostConfig = new HostConfig
-                    {
-                        PublishAllPorts = true,
-                        AutoRemove = true
-                    }
+                    Image = image,
+                    ExposedPorts = exposedPorts,
+                    HostConfig = hostConfig,
                 }, ct);
 
                 // Mostrar un mensaje de éxito al usuario
@@ -135,7 +184,10 @@ namespace DockerContainerCreatorWeb.Controllers
             var images = _client.Images.ListImagesAsync(new ImagesListParameters(), ct).Result;
 
             // Obtain the list of containers on the Docker server
-            var containers = _client.Containers.ListContainersAsync(new ContainersListParameters(), ct).Result;
+            var containers = _client.Containers.ListContainersAsync(new ContainersListParameters
+            {
+                All = true
+            }, ct).Result;
 
             // Add the list of images and containers to the view data
             ViewData["images"] = images;

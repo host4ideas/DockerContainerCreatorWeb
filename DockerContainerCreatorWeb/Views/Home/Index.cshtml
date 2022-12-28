@@ -35,14 +35,29 @@
 @if (containers == null || !containers.Any())
 {
     <p>No se han encontrado contenedores.</p>
-} else
+}
+else
 {
     <div class="form-group">
-        <label for="container">Container</label>
+        <label for="container">Contenedores disponibles</label>
+        <div class="btn-group mb-2 mx-2" role="group" aria-label="Basic example">
+            <button type="button" class="btn btn-outline-success">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16">
+                    <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z" />
+                </svg>
+                <span class="visually-hidden">Button</span>
+            </button>
+            <button type="button" class="btn btn-outline-danger">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-fill" viewBox="0 0 16 16">
+                    <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5z"></path>
+                </svg>
+                <span class="visually-hidden">Button</span>
+            </button>
+        </div>
         <select class="form-control" id="container" name="container">
             @foreach (var container in containers)
             {
-               <option>
+                <option>
                     @(string.Join(",", @container.Names))
                 </option>
             }
@@ -57,21 +72,54 @@
 }
 else
 {
-    <form asp-controller="Home" asp-action="Create" method="post">
+    @*<form asp-controller="Home" asp-action="CreateFormContainer" method="post">*@
+        <form id="containerCreateForm">
         <div class="form-group">
-            <label for="image">Imagen</label>
-            <select class="form-control" id="image" name="image">
+            <label for="image">Imágenes disponibles</label>
+            <select class="form-control" id="image" name="image" required>
                 @foreach (var image in images)
                 {
                     <option value="@image.ID">@image.RepoTags.FirstOrDefault()</option>
                 }
             </select>
         </div>
+        <label>Port mapping (Container Port : Host Port)</label>
+        <button id="rowAdder" type="button"
+            class="btn btn-dark">
+            <span class="bi bi-plus-square-dotted">
+            </span> ADD
+        </button>
+        <div id="newinput">
+            <div id="row">
+                <div class="input-group my-2">
+                    <div class="input-group-prepend">
+                        <button class="btn btn-danger"
+                            id="DeleteRow" type="button">
+                            <i class="bi bi-trash"></i>
+                            Delete
+                        </button>
+                    </div>
+                    <input type="text"
+                       class="form-control s-input"
+                       placeholder="eg.: 80/tcp"
+                       required
+                       id="containerPort1"
+                       name="containerPort1">
+                    <input type="text"
+                       class="form-control sm-input"
+                       placeholder="eg.: 8080"
+                       required
+                       id="hostPort1"
+                       name="hostPort1">
+                </div>
+            </div>
+        </div>
         <div class="form-group">
             <label for="containerName">Nombre del contenedor</label>
             <input type="text" class="form-control" id="containerName" name="containerName"
                placeholder="Ingrese el nombre del contenedor" />
         </div>
-        <button type="submit" class="btn btn-primary">Crear contenedor</button>
+        @*<button type="submit" class="btn btn-primary">Crear contenedor</button>*@
+        <button type="button" class="btn btn-primary" id="submitContainerCreateForm">Crear contenedor</button>
     </form>
 }

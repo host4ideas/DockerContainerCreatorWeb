@@ -1,5 +1,4 @@
 using Docker.DotNet;
-using Docker.DotNet.Models;
 using System.Runtime.InteropServices;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,7 +28,7 @@ DockerClient client = new DockerClientConfiguration(
 
 System.Diagnostics.Debug.WriteLine(client);
 
-builder.Services.AddSingleton<DockerClient>(client);
+builder.Services.AddSingleton(client);
 
 var app = builder.Build();
 
