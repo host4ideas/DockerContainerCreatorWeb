@@ -2,12 +2,12 @@
 {
     public class ResultModel
     {
-        public string Error { get; set; }
+        public string Message { get; set; }
         public bool IsError { get; set; }
 
-        public ResultModel(string error, bool isError)
+        public ResultModel(string message, bool isError)
         {
-            Error = error;
+            Message = message;
             IsError = isError;
         }
     }

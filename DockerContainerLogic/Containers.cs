@@ -48,7 +48,7 @@ namespace DockerContainerLogic
         /// <param name="mappingPorts">The map of the exposed ports and it's binding to a it's host port</param>
         /// <param name="ct">Cancellation token</param>
         /// <returns></returns>
-        public async Task<ResultModel> CreateFormContainer(
+        public async Task<ResultModel> CreateContainer(
             string image,
             string containerName,
             PortMapping[] mappingPorts,
@@ -116,7 +116,7 @@ namespace DockerContainerLogic
                     HostConfig = hostConfig,
                 }, ct);
 
-                return new ResultModel("Contenedor creado con éxito!", false);
+                return new ResultModel($"Contenedor {createdContainer} creado con éxito!", false);
             }
             catch (Exception ex)
             {

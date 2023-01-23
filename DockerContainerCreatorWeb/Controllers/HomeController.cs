@@ -1,6 +1,7 @@
 ﻿using Docker.DotNet.Models;
 using DockerContainerCreatorWeb.Models;
 using DockerContainerLogic;
+using DockerContainerLogic.Models;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Diagnostics;
@@ -35,7 +36,7 @@ namespace DockerContainerCreatorWeb.Controllers
         {
             try
             {
-                if(this.imagesClient.CheckDockerService() != true)
+                if (this.imagesClient.CheckDockerService() != true)
                 {
                     ViewData["ErrorMessage"] = $"No se pudo conectar al Docker daemon. Compruebe que Docker se está ejecutando con normalidad";
                     return View();
@@ -54,41 +55,6 @@ namespace DockerContainerCreatorWeb.Controllers
         }
 
         /// <summary>
-        /// Checks if the desired image exist, if not it will be pulled from DockerHub.
-        /// </summary>
-        /// <param name="image"></param> Name of the image.
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        private async Task PullImageIfNotExist(string image, CancellationToken ct = default)
-        {
-            try
-            {
-                // List all images on the machine
-                var images = this.imagesClient.GetImages();
-
-                // Check if the image is present on the machine
-                var exists = images.Any(x => x.RepoTags.Contains(image));
-
-                if (!exists)
-                {
-                    // Pull the image from the Docker registry
-                    await this.imagesClient.ClientInstance.Images.CreateImageAsync(
-                        new ImagesCreateParameters
-                        {
-                            FromImage = image,
-                        },
-                        null,
-                        new Progress<JSONMessage>(m => Console.WriteLine(m.Status)), ct);
-                }
-            }
-            catch (Exception ex)
-            {
-                // Mostrar un mensaje de error al usuario
-                ViewData["ErrorMessage"] = $"Error al crear el contenedor: {ex.Message}";
-            }
-        }
-
-        /// <summary>
         /// Method <c>Create</c> creates a Docker container. Sends to view the existing containers and images.
         /// </summary>
         /// <param name="image">The image to use to create the container</param>
@@ -103,91 +69,20 @@ namespace DockerContainerCreatorWeb.Controllers
             string mappingPorts,
             CancellationToken ct = default)
         {
-            try
+            var mappingPortsObject = JsonConvert.DeserializeObject<PortMapping[]>(mappingPorts)!;
+
+            ResultModel result = await containersClient.CreateContainer(image: image, containerName: containerName, mappingPorts: mappingPortsObject, ct: ct);
+
+            if (result.IsError == true)
             {
-                await PullImageIfNotExist(image, ct);
-
-                var mappingPortsObject = JsonConvert.DeserializeObject<PortMapping[]>(mappingPorts);
-
-                // Crear una nueva configuración para el contenedor
-                var config = new Config
-                {
-                    AttachStdin = true,
-                    AttachStdout = true,
-                    AttachStderr = true,
-                    OpenStdin = true,
-                    Tty = true,
-                };
-
-                //Define the host configuration
-                var hostConfig = new HostConfig { };
-                var exposedPorts = new Dictionary<string, EmptyStruct> { };
-
-                if (mappingPortsObject != null && mappingPortsObject.Any())
-                {
-                    var portBindings = new Dictionary<string, IList<PortBinding>> { };
-
-                    foreach (var item in mappingPortsObject)
-                    {
-                        portBindings.Add(
-                            item.ContainerPort!,
-                            new List<PortBinding> {
-                                new PortBinding { HostPort = item.HostPort }
-                            }
-                        );
-                        exposedPorts.Add(item.ContainerPort!, default);
-                    }
-
-                    hostConfig = new HostConfig
-                    {
-                        PortBindings = portBindings,
-                        AutoRemove = false,
-                    };
-                }
-                else
-                {
-                    hostConfig = new HostConfig
-                    {
-                        PublishAllPorts = true,
-                        AutoRemove = false,
-                    };
-
-                    exposedPorts = new Dictionary<string, EmptyStruct>
-                    {
-                        { "80/tcp", default },
-                    };
-                }
-
-                // Crear el contenedor
-                var createdContainer = await this.imagesClient.ClientInstance.Containers.CreateContainerAsync(new CreateContainerParameters(config)
-                {
-                    Name = containerName,
-                    Image = image,
-                    ExposedPorts = exposedPorts,
-                    HostConfig = hostConfig,
-                }, ct);
-
-                // Mostrar un mensaje de éxito al usuario
-                ViewData["Message"] = "Contenedor creado con éxito!";
+                ViewData["ErrorMessage"] = $"No se pudo crear el contenedor:<br />{result.Message}";
+                return View("Index");
             }
-            catch (Exception ex)
-            {
-                // Mostrar un mensaje de error al usuario
-                ViewData["ErrorMessage"] = $"Error al crear el contenedor: {ex.Message}";
-            }
-
-            // Obtain the list of images available on the Docker server
-            var images = this.imagesClient.ClientInstance.Images.ListImagesAsync(new ImagesListParameters(), ct).Result;
-
-            // Obtain the list of containers on the Docker server
-            var containers = this.imagesClient.ClientInstance.Containers.ListContainersAsync(new ContainersListParameters
-            {
-                All = true
-            }, ct).Result;
 
             // Add the list of images and containers to the view data
-            ViewData["images"] = images;
-            ViewData["containers"] = containers;
+            ViewData["images"] = this.imagesClient.GetImages();
+            ViewData["containers"] = this.containersClient.GetContainers();
+            ViewData["Message"] = result.Message;
 
             // Render the view, passing the list of images and containers as arguments
             return View("Index");

@@ -8,7 +8,7 @@ $(document).ready(function () {
     $("#submitContainerCreateForm").click(function (ev) {
         ev.preventDefault();
 
-        var stringArray = new Array();
+        var stringArray = [];
 
         for (var i = 1; i <= inputCount; i++) {
             const containerPort = $("#containerPort" + i).val();
