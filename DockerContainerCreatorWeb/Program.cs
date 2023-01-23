@@ -26,8 +26,6 @@ DockerClient client = new DockerClientConfiguration(
     new Uri(DockerApiUri()))
      .CreateClient();
 
-System.Diagnostics.Debug.WriteLine(client);
-
 builder.Services.AddSingleton(client);
 
 var app = builder.Build();

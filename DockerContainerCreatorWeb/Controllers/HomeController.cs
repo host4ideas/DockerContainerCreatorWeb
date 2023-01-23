@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Diagnostics;
+using DockerContainerLogic;
 
 namespace DockerContainerCreatorWeb.Controllers
 {
@@ -31,7 +32,7 @@ namespace DockerContainerCreatorWeb.Controllers
         {
             try
             {
-                // try to ping Doccker daemon through Docker Client --> raises DockerApiException
+                // try to ping Docker daemon through Docker Client --> raises DockerApiException
                 _client.System.PingAsync().Wait();
 
                 ViewData["Message"] = "Docker se está ejecutando con normalidad";
