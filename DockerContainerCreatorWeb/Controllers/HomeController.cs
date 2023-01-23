@@ -1,4 +1,5 @@
-﻿using Docker.DotNet.Models;
+﻿using Docker.DotNet;
+using Docker.DotNet.Models;
 using DockerContainerCreatorWeb.Models;
 using DockerContainerLogic;
 using Microsoft.AspNetCore.Mvc;
@@ -9,17 +10,11 @@ namespace DockerContainerCreatorWeb.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly Images imagesClient;
-        private readonly Containers containersClient;
-
+        private DockerClient Client { get; set; }
         private readonly ILogger<HomeController> _logger;
 
         public HomeController(ILogger<HomeController> logger)
         {
-            // Initialize Docker Client
-            this.imagesClient = new();
-            this.containersClient = new();
-
             _logger = logger;
         }
 
@@ -35,13 +30,22 @@ namespace DockerContainerCreatorWeb.Controllers
         {
             try
             {
-                // Add the list of images and containers to the view data
-                ViewData["images"] = this.imagesClient.GetImages();
-                ViewData["containers"] = this.containersClient.GetContainers();
+                DockerInstance.Init();
             }
             catch (Exception ex)
             {
                 ViewData["ErrorMessage"] = $"No se pudo conectar al Docker daemon. Compruebe que Docker se está ejecutando con normalidad:<br />{ex.Message}";
+            }
+
+            try
+            {
+                // Add the list of images and containers to the view data
+                ViewData["images"] = Images.GetImages();
+                ViewData["containers"] = Containers.GetContainers();
+            }
+            catch (Exception ex)
+            {
+                ViewData["ErrorMessage"] = $"No se pudo recoger la información de las imágenes y/o contenedores:<br />{ex.Message}";
             }
 
             return View();
@@ -171,7 +175,7 @@ namespace DockerContainerCreatorWeb.Controllers
             }
 
             // Obtain the list of images available on the Docker server
-            var images = this.imagesClient.ClientInstance.Images.ListImagesAsync(new ImagesListParameters(), ct).Result;
+            var images = DockerInstance.Instance.ClientInstance.Images.ListImagesAsync(new ImagesListParameters(), ct).Result;
 
             // Obtain the list of containers on the Docker server
             var containers = this.imagesClient.ClientInstance.Containers.ListContainersAsync(new ContainersListParameters

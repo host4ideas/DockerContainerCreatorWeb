@@ -3,11 +3,11 @@ using DockerContainerLogic.Models;
 
 namespace DockerContainerLogic
 {
-    public class Containers : DockerInstance
+    public class Containers
     {
-        public IList<ContainerListResponse> GetContainers()
+        static public IList<ContainerListResponse> GetContainers()
         {
-            return this.ClientInstance.Containers.ListContainersAsync(new ContainersListParameters
+            return DockerInstance.Instance.ClientInstance!.Containers.ListContainersAsync(new ContainersListParameters
             {
                 All = true
             }).Result;
@@ -19,10 +19,10 @@ namespace DockerContainerLogic
         /// <param name="image"></param> Name of the image.
         /// <param name="ct"></param>
         /// <returns></returns>
-        private async Task PullImageIfNotExist(string image, CancellationToken ct = default)
+        static private async Task PullImageIfNotExist(string image, CancellationToken ct = default)
         {
             // List all images on the machine
-            var images = await this.ClientInstance.Images.ListImagesAsync(new ImagesListParameters(), ct);
+            var images = await DockerInstance.Instance.ClientInstance!.Images.ListImagesAsync(new ImagesListParameters(), ct);
 
             // Check if the image is present on the machine
             var exists = images.Any(x => x.RepoTags.Contains(image));
@@ -30,7 +30,7 @@ namespace DockerContainerLogic
             if (!exists)
             {
                 // Pull the image from the Docker registry
-                await this.ClientInstance.Images.CreateImageAsync(
+                await DockerInstance.Instance.ClientInstance!.Images.CreateImageAsync(
                     new ImagesCreateParameters
                     {
                         FromImage = image,
@@ -48,7 +48,7 @@ namespace DockerContainerLogic
         /// <param name="mappingPorts">The map of the exposed ports and it's binding to a it's host port</param>
         /// <param name="ct">Cancellation token</param>
         /// <returns></returns>
-        public async Task<ResultModel> CreateFormContainer(
+        static public async Task<ResultModel> CreateFormContainer(
             string image,
             string containerName,
             PortMapping[] mappingPorts,
@@ -108,7 +108,7 @@ namespace DockerContainerLogic
                 }
 
                 // Crear el contenedor
-                var createdContainer = await this.ClientInstance.Containers.CreateContainerAsync(new CreateContainerParameters(config)
+                var createdContainer = await DockerInstance.Instance.ClientInstance!.Containers.CreateContainerAsync(new CreateContainerParameters(config)
                 {
                     Name = containerName,
                     Image = image,
@@ -129,12 +129,12 @@ namespace DockerContainerLogic
         /// </summary>
         /// <param name="containerID"></param>
         /// <returns></returns>
-        public async Task<ResultModel> StopContainer(string containerID)
+        static public async Task<ResultModel> StopContainer(string containerID)
         {
             try
             {
                 // Stop and remove the container
-                await this.ClientInstance.Containers.StopContainerAsync(containerID,
+                await DockerInstance.Instance.ClientInstance!.Containers.StopContainerAsync(containerID,
                     new ContainerStopParameters
                     {
                         WaitBeforeKillSeconds = 10
@@ -152,11 +152,11 @@ namespace DockerContainerLogic
         /// </summary>
         /// <param name="containerID"></param>
         /// <returns></returns>
-        public async Task<ResultModel> RemoveContainer(string containerID)
+        static public async Task<ResultModel> RemoveContainer(string containerID)
         {
             try
             {
-                await this.ClientInstance.Containers.RemoveContainerAsync(containerID,
+                await DockerInstance.Instance.ClientInstance!.Containers.RemoveContainerAsync(containerID,
                 new ContainerRemoveParameters
                 {
                     Force = true

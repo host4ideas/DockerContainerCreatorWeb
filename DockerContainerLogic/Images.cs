@@ -1,12 +1,13 @@
-﻿using Docker.DotNet.Models;
+﻿using Docker.DotNet;
+using Docker.DotNet.Models;
 
 namespace DockerContainerLogic
 {
-    public class Images : DockerInstance
+    public class Images
     {
-        public IList<ImagesListResponse> GetImages()
+        static public IList<ImagesListResponse> GetImages()
         {
-            return this.ClientInstance.Images.ListImagesAsync(new ImagesListParameters()).Result;
+            return DockerInstance.Instance.ClientInstance!.Images.ListImagesAsync(new ImagesListParameters()).Result;
         }
     }
 }

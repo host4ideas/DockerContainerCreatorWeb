@@ -5,14 +5,28 @@ namespace DockerContainerLogic
 {
     public class DockerInstance
     {
-        public readonly DockerClient ClientInstance;
+        private static Lazy<DockerInstance>? instance;
 
-        public DockerInstance()
+        public static DockerInstance Instance
         {
-            if (this.ClientInstance == null)
+            get { return instance!.Value; }
+        }
+
+        public DockerClient? ClientInstance;
+
+        private DockerInstance()
+        {
+            ClientInstance = CreateDockerInstance();
+        }
+
+        public static void Init()
+        {
+            var initTask = Task.Factory.StartNew(() =>
             {
-                this.ClientInstance = CreateDockerInstance();
-            }
+                return new DockerInstance();
+            });
+
+            instance = new Lazy<DockerInstance>(() => initTask.Result);
         }
 
         #region METHODS 
