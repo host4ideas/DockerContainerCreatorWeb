@@ -2,7 +2,7 @@
 
 namespace DockerContainerLogic
 {
-    internal class Images : DockerInstance
+    public class Images : DockerInstance
     {
         public IList<ImagesListResponse> GetImages()
         {

@@ -1,25 +1,28 @@
-﻿using Docker.DotNet;
-using Docker.DotNet.Models;
+﻿using Docker.DotNet.Models;
 using DockerContainerCreatorWeb.Models;
+using DockerContainerLogic;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.Diagnostics;
-using DockerContainerLogic;
 
 namespace DockerContainerCreatorWeb.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly DockerClient _client;
+        private readonly Images imagesClient;
+        private readonly Containers containersClient;
 
         private readonly ILogger<HomeController> _logger;
 
-        public HomeController(DockerClient client, ILogger<HomeController> logger)
+        public HomeController(ILogger<HomeController> logger)
         {
-            _client = client;
+            // Initialize Docker Client
+            this.imagesClient = new();
+            this.containersClient = new();
+
             _logger = logger;
         }
+
         public IActionResult Privacy()
         {
             return View();
@@ -32,23 +35,9 @@ namespace DockerContainerCreatorWeb.Controllers
         {
             try
             {
-                // try to ping Docker daemon through Docker Client --> raises DockerApiException
-                _client.System.PingAsync().Wait();
-
-                ViewData["Message"] = "Docker se está ejecutando con normalidad";
-
-                // Obtain the list of images available on the Docker server
-                var images = _client.Images.ListImagesAsync(new ImagesListParameters()).Result;
-
-                // Obtain the list of containers on the Docker server
-                var containers = _client.Containers.ListContainersAsync(new ContainersListParameters
-                {
-                    All = true
-                }).Result;
-
                 // Add the list of images and containers to the view data
-                ViewData["images"] = images;
-                ViewData["containers"] = containers;
+                ViewData["images"] = this.imagesClient.GetImages();
+                ViewData["containers"] = this.containersClient.GetContainers();
             }
             catch (Exception ex)
             {
@@ -69,7 +58,7 @@ namespace DockerContainerCreatorWeb.Controllers
             try
             {
                 // List all images on the machine
-                var images = await _client.Images.ListImagesAsync(new ImagesListParameters(), ct);
+                var images = this.imagesClient.GetImages();
 
                 // Check if the image is present on the machine
                 var exists = images.Any(x => x.RepoTags.Contains(image));
@@ -77,7 +66,7 @@ namespace DockerContainerCreatorWeb.Controllers
                 if (!exists)
                 {
                     // Pull the image from the Docker registry
-                    await _client.Images.CreateImageAsync(
+                    await this.imagesClient.ClientInstance.Images.CreateImageAsync(
                         new ImagesCreateParameters
                         {
                             FromImage = image,
@@ -135,12 +124,12 @@ namespace DockerContainerCreatorWeb.Controllers
                     foreach (var item in mappingPortsObject)
                     {
                         portBindings.Add(
-                            item.ContainerPort,
+                            item.ContainerPort!,
                             new List<PortBinding> {
                                 new PortBinding { HostPort = item.HostPort }
                             }
                         );
-                        exposedPorts.Add(item.ContainerPort, default);
+                        exposedPorts.Add(item.ContainerPort!, default);
                     }
 
                     hostConfig = new HostConfig
@@ -164,7 +153,7 @@ namespace DockerContainerCreatorWeb.Controllers
                 }
 
                 // Crear el contenedor
-                var createdContainer = await _client.Containers.CreateContainerAsync(new CreateContainerParameters(config)
+                var createdContainer = await this.imagesClient.ClientInstance.Containers.CreateContainerAsync(new CreateContainerParameters(config)
                 {
                     Name = containerName,
                     Image = image,
@@ -182,10 +171,10 @@ namespace DockerContainerCreatorWeb.Controllers
             }
 
             // Obtain the list of images available on the Docker server
-            var images = _client.Images.ListImagesAsync(new ImagesListParameters(), ct).Result;
+            var images = this.imagesClient.ClientInstance.Images.ListImagesAsync(new ImagesListParameters(), ct).Result;
 
             // Obtain the list of containers on the Docker server
-            var containers = _client.Containers.ListContainersAsync(new ContainersListParameters
+            var containers = this.imagesClient.ClientInstance.Containers.ListContainersAsync(new ContainersListParameters
             {
                 All = true
             }, ct).Result;
@@ -202,7 +191,7 @@ namespace DockerContainerCreatorWeb.Controllers
         public async Task<IActionResult> StopContainer(string containerID)
         {
             // Stop and remove the container
-            await _client.Containers.StopContainerAsync(containerID,
+            await this.imagesClient.ClientInstance.Containers.StopContainerAsync(containerID,
                 new ContainerStopParameters
                 {
                     WaitBeforeKillSeconds = 10
@@ -213,7 +202,7 @@ namespace DockerContainerCreatorWeb.Controllers
         [HttpPost]
         public async Task<IActionResult> RemoveContainer(string containerID)
         {
-            await _client.Containers.RemoveContainerAsync(containerID,
+            await this.imagesClient.ClientInstance.Containers.RemoveContainerAsync(containerID,
             new ContainerRemoveParameters
             {
                 Force = true

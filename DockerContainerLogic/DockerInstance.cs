@@ -5,13 +5,14 @@ namespace DockerContainerLogic
 {
     public class DockerInstance
     {
-        #region PROPERTIES  
-        public DockerClient ClientInstance { get; set; }
-        #endregion
+        public readonly DockerClient ClientInstance;
 
         public DockerInstance()
         {
-            this.ClientInstance = CreateDockerInstance();
+            if (this.ClientInstance == null)
+            {
+                this.ClientInstance = CreateDockerInstance();
+            }
         }
 
         #region METHODS 

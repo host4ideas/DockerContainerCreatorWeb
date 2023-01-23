@@ -6,27 +6,27 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-var IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-var IsLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+//var IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+//var IsLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
-string DockerApiUri()
-{
-    if (IsWindows)
-        return "npipe://./pipe/docker_engine";
+//string DockerApiUri()
+//{
+//    if (IsWindows)
+//        return "npipe://./pipe/docker_engine";
 
-    if (IsLinux)
-        return "unix:///var/run/docker.sock";
+//    if (IsLinux)
+//        return "unix:///var/run/docker.sock";
 
-    throw new Exception(
-        "Was unable to determine what OS this is running on, does not appear to be Windows or Linux!?");
-}
+//    throw new Exception(
+//        "Was unable to determine what OS this is running on, does not appear to be Windows or Linux!?");
+//}
 
-// Agregar el cliente de Docker como un servicio
-DockerClient client = new DockerClientConfiguration(
-    new Uri(DockerApiUri()))
-     .CreateClient();
+//// Agregar el cliente de Docker como un servicio
+//DockerClient client = new DockerClientConfiguration(
+//    new Uri(DockerApiUri()))
+//     .CreateClient();
 
-builder.Services.AddSingleton(client);
+//builder.Services.AddSingleton(client);
 
 var app = builder.Build();
 
