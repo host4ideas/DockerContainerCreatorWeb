@@ -35,13 +35,19 @@ namespace DockerContainerCreatorWeb.Controllers
         {
             try
             {
+                if(this.imagesClient.CheckDockerService() != true)
+                {
+                    ViewData["ErrorMessage"] = $"No se pudo conectar al Docker daemon. Compruebe que Docker se está ejecutando con normalidad";
+                    return View();
+                }
+
                 // Add the list of images and containers to the view data
                 ViewData["images"] = this.imagesClient.GetImages();
                 ViewData["containers"] = this.containersClient.GetContainers();
             }
             catch (Exception ex)
             {
-                ViewData["ErrorMessage"] = $"No se pudo conectar al Docker daemon. Compruebe que Docker se está ejecutando con normalidad:<br />{ex.Message}";
+                ViewData["ErrorMessage"] = $"No se pudo recoger la información de imágenes ni contenedores:<br />{ex.Message}";
             }
 
             return View();
